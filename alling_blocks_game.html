@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falling Blocks Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF'];
+        const letters = ['A', 'B', 'C', 'D', 'E'];
+        const speeds = [2, 4, 6, 8, 10]; // 对应字母的速度，从慢到快
+        const scores = [1, 2, 3, 4, 5]; // 对应字母的得分，从小到大
+        const blocks = [];
+        const particles = []; // 用于存储破碎效果的小方块
+        let score = 0;
+
+        class Block {
+            constructor(x, y, letter, color, speed, point) {
+                this.x = x;
+                this.y = y;
+                this.letter = letter;
+                this.color = color;
+                this.speed = speed;
+                this.point = point;
+                this.size = 50;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.fillStyle = '#000000';
+                ctx.font = '30px Arial';
+                ctx.fillText(this.letter, this.x + 15, this.y + 35);
+            }
+
+            move() {
+                this.y += this.speed;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color, size, speedX, speedY) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = size;
+                this.speedX = speedX;
+                this.speedY = speedY;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+
+            move() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.size *= 0.95; // 逐渐缩小
+            }
+        }
+
+        function spawnBlock() {
+            const x = Math.random() * (canvas.width - 50);
+            const letterIndex = Math.floor(Math.random() * letters.length);
+            const letter = letters[letterIndex];
+            const color = colors[letterIndex];
+            const speed = speeds[letterIndex];
+            const point = scores[letterIndex];
+            blocks.push(new Block(x, 0, letter, color, speed, point));
+        }
+
+        function createParticles(x, y, color) {
+            const particleCount = 10; // 破碎成10个小方块
+            for (let i = 0; i < particleCount; i++) {
+                const size = 10;
+                const speedX = (Math.random() - 0.5) * 4;
+                const speedY = (Math.random() - 0.5) * 4;
+                particles.push(new Particle(x, y, color, size, speedX, speedY));
+            }
+        }
+
+        function update() {
+            // 绘制背景
+            ctx.fillStyle = '#FFFFFF'; // 白色背景
+            ctx.fillRect(0, 0, canvas.width, canvas.height * 2 / 3);
+            ctx.fillStyle = '#000000'; // 黑色背景
+            ctx.fillRect(0, canvas.height * 2 / 3, canvas.width, canvas.height / 3);
+
+            // 绘制边框
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 5;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制方块
+            blocks.forEach(block => {
+                block.move();
+                block.draw();
+            });
+
+            // 绘制粒子
+            particles.forEach((particle, index) => {
+                particle.move();
+                particle.draw();
+                if (particle.size < 1) {
+                    particles.splice(index, 1);
+                }
+            });
+
+            // 移除超出屏幕的方块
+            blocks.forEach((block, index) => {
+                if (block.y > canvas.height) {
+                    blocks.splice(index, 1);
+                }
+            });
+
+            requestAnimationFrame(update);
+        }
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            if (mouseY > canvas.height * 2 / 3) {
+                blocks.forEach((block, index) => {
+                    if (mouseX > block.x && mouseX < block.x + block.size && mouseY > block.y && mouseY < block.y + block.size) {
+                        score += block.point; // 增加得分
+                        createParticles(block.x + block.size / 2, block.y + block.size / 2, block.color); // 创建破碎效果
+                        blocks.splice(index, 1);
+                        scoreElement.textContent = `Score: ${score}`;
+                    }
+                });
+            }
+        });
+
+        setInterval(spawnBlock, 1000);
+        update();
+    </script>
+</body>
+</html>
